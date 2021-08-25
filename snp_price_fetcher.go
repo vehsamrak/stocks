@@ -19,10 +19,11 @@ const (
 	urlTimeout             = time.Second * 30
 	urlTLSHandshakeTimeout = time.Second * 5
 	stockName              = "S&P 500"
+	SNP500PricesFileName   = "spx_prices.xls"
 	rowStockName           = 6
 	columnDate             = 0
 	columnPrice            = 1
-	SNP500PricesFileName   = "spx_prices.xls"
+	maxLoopCount           = 1000000
 )
 
 type Price struct {
@@ -68,7 +69,7 @@ func downloadPrices(rateLimiter ratelimit.Limiter, pricesUrl string) (*[]Price, 
 		return nil, err
 	}
 
-	// TODO[petr]: save file with DATE. Do not download file if date of last file is today
+	// TODO[petr]: save file with DATE. Do not download file if date of the last file is today
 	filename := SNP500PricesFileName
 	err = ioutil.WriteFile(filename, responseBodyBytes, 0644)
 	if err != nil {
@@ -97,10 +98,9 @@ func fetchPricesFromXLS(xlsFilePath string) (*[]Price, error) {
 	}
 
 	currentRow := rowStockName + 1
-	maxLoopSize := 1000000
 	var prices []Price
 	for {
-		if currentRow > maxLoopSize {
+		if currentRow > maxLoopCount {
 			return nil, fmt.Errorf("maximum loop size reached")
 		}
 
@@ -132,7 +132,13 @@ func fetchPricesFromXLS(xlsFilePath string) (*[]Price, error) {
 func validateSheet(sheet *xls.WorkSheet) error {
 	row6Column1 := sheet.Row(rowStockName).Col(columnPrice)
 	if row6Column1 != stockName {
-		return fmt.Errorf("row 6 column 1 must be \"%s\". Current is \"%s\"", stockName, row6Column1)
+		return fmt.Errorf(
+			"row %d column %d must be \"%s\". Current is \"%s\"",
+			rowStockName,
+			columnPrice,
+			stockName,
+			row6Column1,
+		)
 	}
 
 	return nil
