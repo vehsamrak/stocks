@@ -10,8 +10,9 @@ type TradeResult struct {
 }
 
 type Trade struct {
-	Direction TradeDirection
-	Price     Price
+	Direction   TradeDirection
+	Price       Price
+	MoneyAmount int
 }
 
 func NewTradeResult(initialBalance int) *TradeResult {
@@ -35,7 +36,7 @@ func (tr *TradeResult) HasOpenedTrades() bool {
 	return len(tr.openedTrades) > 0
 }
 
-func (tr *TradeResult) OpenTrade(direction TradeDirection, price Price) {
+func (tr *TradeResult) OpenTrade(moneyAmount int, direction TradeDirection, price Price) {
 	tradeMonth := time.Date(
 		price.Date.Year(),
 		price.Date.Month(),
@@ -56,8 +57,9 @@ func (tr *TradeResult) OpenTrade(direction TradeDirection, price Price) {
 	tr.tradedMonths[tradeMonth] = true
 	tr.openedTrades = append(
 		tr.openedTrades, Trade{
-			Direction: direction,
-			Price:     price,
+			Direction:   direction,
+			Price:       price,
+			MoneyAmount: moneyAmount,
 		},
 	)
 }
@@ -85,7 +87,7 @@ func (b *Backtest) Run(initialBalance int, strategy TradeStrategy, prices []Pric
 			}
 
 			if b.canOpenTrade(tradeResult, price, condition) {
-				b.openTrade(tradeResult, condition.Direction, price)
+				b.openTrade(tradeResult, condition, price)
 			}
 		}
 	}
@@ -129,8 +131,9 @@ func (b *Backtest) canCloseTrade(price Price, condition TradeCondition) bool {
 	return false
 }
 
-func (b *Backtest) openTrade(tradeResult *TradeResult, direction TradeDirection, price Price) {
-	tradeResult.OpenTrade(direction, price)
+func (b *Backtest) openTrade(tradeResult *TradeResult, condition TradeCondition, price Price) {
+	direction := condition.Direction
+	tradeResult.OpenTrade(condition.MoneyAmount, direction, price)
 }
 
 func (b *Backtest) closeTrade(tradeResult *TradeResult) {
