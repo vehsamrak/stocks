@@ -12,24 +12,38 @@ func (s *StableBuyTradeStrategy) Name() string {
 }
 
 func (s *StableBuyTradeStrategy) Conditions() []TradeCondition {
+	tradeDays := make(map[time.Time]int)
+	tradeDays[s.createTimeForMonth(time.January)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.February)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.March)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.April)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.May)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.June)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.July)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.August)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.September)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.October)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.November)] = s.DayOfTrade
+	tradeDays[s.createTimeForMonth(time.December)] = s.DayOfTrade
+
 	return []TradeCondition{
 		{
 			MoneyAmount: s.MoneyAmount,
 			Direction:   buy,
-			OpenOnDays: []TradeDay{
-				{Month: time.January, Day: s.DayOfTrade},
-				{Month: time.February, Day: s.DayOfTrade},
-				{Month: time.March, Day: s.DayOfTrade},
-				{Month: time.April, Day: s.DayOfTrade},
-				{Month: time.May, Day: s.DayOfTrade},
-				{Month: time.June, Day: s.DayOfTrade},
-				{Month: time.July, Day: s.DayOfTrade},
-				{Month: time.August, Day: s.DayOfTrade},
-				{Month: time.September, Day: s.DayOfTrade},
-				{Month: time.October, Day: s.DayOfTrade},
-				{Month: time.November, Day: s.DayOfTrade},
-				{Month: time.December, Day: s.DayOfTrade},
-			},
+			OpenOnDays:  tradeDays,
 		},
 	}
+}
+
+func (s *StableBuyTradeStrategy) createTimeForMonth(month time.Month) time.Time {
+	return time.Date(
+		0,
+		month,
+		0,
+		0,
+		0,
+		0,
+		0,
+		time.Now().Location(),
+	)
 }

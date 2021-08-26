@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -38,42 +39,46 @@ type Price struct {
 // Before that date the Julian calendar was used so a conversion would be necessary
 var excelEpoch = time.Date(1899, time.December, 30, 0, 0, 0, 0, time.UTC)
 
-func main() {
+func FetchPrices() []Price {
 	rateLimiter := ratelimit.New(rateLimitInSeconds)
 	prices, err := downloadPrices(rateLimiter, urlSNP500)
 	if err != nil {
 		panic(err)
 	}
 
-	printPrices(prices)
+	return prices
 }
 
-func downloadPrices(rateLimiter ratelimit.Limiter, pricesUrl string) (*[]Price, error) {
-	rateLimiter.Take()
-
-	var netClient = &http.Client{
-		Timeout: urlTimeout,
-		Transport: &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout:   urlTimeout,
-				KeepAlive: urlTimeout,
-			}).DialContext,
-			TLSHandshakeTimeout: urlTLSHandshakeTimeout,
-		},
-	}
-	response, _ := netClient.Get(pricesUrl)
-	defer response.Body.Close()
-
-	responseBodyBytes, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
+func downloadPrices(rateLimiter ratelimit.Limiter, pricesUrl string) ([]Price, error) {
 	// TODO[petr]: save file with DATE. Do not download file if date of the last file is today
 	filename := SNP500PricesFileName
-	err = ioutil.WriteFile(filename, responseBodyBytes, 0644)
-	if err != nil {
-		return nil, err
+
+	// check if file exists
+	if _, err := os.Stat(filename); err != nil {
+		rateLimiter.Take()
+
+		var netClient = &http.Client{
+			Timeout: urlTimeout,
+			Transport: &http.Transport{
+				DialContext: (&net.Dialer{
+					Timeout:   urlTimeout,
+					KeepAlive: urlTimeout,
+				}).DialContext,
+				TLSHandshakeTimeout: urlTLSHandshakeTimeout,
+			},
+		}
+		response, _ := netClient.Get(pricesUrl)
+		defer response.Body.Close()
+
+		responseBodyBytes, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		err = ioutil.WriteFile(filename, responseBodyBytes, 0644)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	prices, err := fetchPricesFromXLS(filename)
@@ -84,7 +89,7 @@ func downloadPrices(rateLimiter ratelimit.Limiter, pricesUrl string) (*[]Price, 
 	return prices, nil
 }
 
-func fetchPricesFromXLS(xlsFilePath string) (*[]Price, error) {
+func fetchPricesFromXLS(xlsFilePath string) ([]Price, error) {
 	table, err := xls.Open(xlsFilePath, "UTF8")
 	if err != nil {
 		return nil, err
@@ -126,7 +131,7 @@ func fetchPricesFromXLS(xlsFilePath string) (*[]Price, error) {
 		currentRow++
 	}
 
-	return &prices, nil
+	return prices, nil
 }
 
 func validateSheet(sheet *xls.WorkSheet) error {
