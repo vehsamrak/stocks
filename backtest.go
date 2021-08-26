@@ -1,10 +1,15 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type TradeResult struct {
 	initialBalance int
 	balance        int
+	deposits       int
+	profit         int
 	openedTrades   []Trade
 	tradedMonths   map[time.Time]bool
 }
@@ -69,16 +74,27 @@ func (tr *TradeResult) CloseTrade() {
 }
 
 func (tr *TradeResult) Profit() int {
-	return tr.balance - tr.initialBalance
+	return tr.profit
+}
+
+func (tr *TradeResult) Deposits() int {
+	return tr.deposits
 }
 
 type Backtest struct {
+	From time.Time
+	Till time.Time
 }
 
 func (b *Backtest) Run(initialBalance int, strategy TradeStrategy, prices []Price) *TradeResult {
 	tradeResult := NewTradeResult(initialBalance)
 
+	var lastPrice Price
 	for _, price := range prices {
+		if price.Date.Before(b.From) || price.Date.After(b.Till) {
+			continue
+		}
+
 		for _, condition := range strategy.Conditions() {
 			if tradeResult.HasOpenedTrades() {
 				if b.canCloseTrade(price, condition) {
@@ -90,7 +106,11 @@ func (b *Backtest) Run(initialBalance int, strategy TradeStrategy, prices []Pric
 				b.openTrade(tradeResult, condition, price)
 			}
 		}
+
+		lastPrice = price
 	}
+
+	b.calculateProfit(tradeResult, lastPrice)
 
 	return tradeResult
 }
@@ -139,4 +159,25 @@ func (b *Backtest) openTrade(tradeResult *TradeResult, condition TradeCondition,
 func (b *Backtest) closeTrade(tradeResult *TradeResult) {
 	// TODO[petr]: implement trade closing
 	tradeResult.CloseTrade()
+}
+
+func (b *Backtest) calculateProfit(tradeResult *TradeResult, lastPrice Price) {
+	fmt.Printf("date | last | price | profit\n")
+	for _, trade := range tradeResult.openedTrades {
+		tradeResult.deposits = tradeResult.deposits + trade.MoneyAmount
+		saldo := lastPrice.Price - trade.Price.Price
+		profitPercent := saldo / (trade.Price.Price / 100)
+		tradeResult.profit += int(float64(trade.MoneyAmount) * profitPercent / 100)
+
+		fmt.Printf(
+			"%s | %d | %d | %.02f%%| %d\n",
+			trade.Price.Date.Format("2006-01-02"),
+			int(lastPrice.Price),
+			int(trade.Price.Price),
+			profitPercent,
+			tradeResult.profit,
+		)
+	}
+
+	tradeResult.balance += tradeResult.deposits + tradeResult.profit
 }
