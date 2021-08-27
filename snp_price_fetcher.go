@@ -20,7 +20,7 @@ const (
 	urlTimeout             = time.Second * 30
 	urlTLSHandshakeTimeout = time.Second * 5
 	stockName              = "S&P 500"
-	SNP500PricesFileName   = "spx_prices.xls"
+	SNP500PricesFileName   = "prices/spx_prices.xls"
 	rowStockName           = 6
 	columnDate             = 0
 	columnPrice            = 1
@@ -50,8 +50,7 @@ func FetchPrices() []Price {
 }
 
 func downloadPrices(rateLimiter ratelimit.Limiter, pricesUrl string) ([]Price, error) {
-	// TODO[petr]: save file with DATE. Do not download file if date of the last file is today
-	filename := SNP500PricesFileName
+	filename := fmt.Sprintf("%s-%s", SNP500PricesFileName, time.Now().Format("2006-01-02"))
 
 	// check if file exists
 	if _, err := os.Stat(filename); err != nil {
