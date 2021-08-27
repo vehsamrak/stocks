@@ -6,16 +6,14 @@ import (
 )
 
 const (
-	initialBalance = 100
-	fromDate       = "2011-08-01"
-	tillDate       = "2022-01-01"
+	initialBalance = 23000
+	fromDate       = "2020-08-01"
 )
 
 func main() {
 	prices := FetchPrices()
 	fromTime, _ := time.Parse("2006-01-02", fromDate)
-	tillTime, _ := time.Parse("2006-01-02", tillDate)
-	backtest := &Backtest{From: fromTime, Till: tillTime}
+	backtest := &Backtest{From: fromTime}
 	strategy := &StableBuyTradeStrategy{
 		MoneyAmount: 2000,
 		DayOfTrade:  6,

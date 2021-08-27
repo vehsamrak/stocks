@@ -83,15 +83,15 @@ func (tr *TradeResult) Deposits() int {
 
 type Backtest struct {
 	From time.Time
-	Till time.Time
 }
 
 func (b *Backtest) Run(initialBalance int, strategy TradeStrategy, prices []Price) *TradeResult {
 	tradeResult := NewTradeResult(initialBalance)
 
 	var lastPrice Price
+	var initialCapitalParked bool
 	for _, price := range prices {
-		if price.Date.Before(b.From) || price.Date.After(b.Till) {
+		if price.Date.Before(b.From) {
 			continue
 		}
 
@@ -103,6 +103,13 @@ func (b *Backtest) Run(initialBalance int, strategy TradeStrategy, prices []Pric
 			}
 
 			if b.canOpenTrade(tradeResult, price, condition) {
+				if !initialCapitalParked {
+					initialCapitalCondition := condition
+					initialCapitalCondition.MoneyAmount = tradeResult.initialBalance
+					b.openTrade(tradeResult, initialCapitalCondition, price)
+					initialCapitalParked = true
+				}
+
 				b.openTrade(tradeResult, condition, price)
 			}
 		}
